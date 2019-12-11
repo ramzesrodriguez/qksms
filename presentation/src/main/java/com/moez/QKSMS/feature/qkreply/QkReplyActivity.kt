@@ -79,8 +79,8 @@ class QkReplyActivity : QkThemedActivity(), QkReplyView {
             toolbar.setBackgroundTint(resolveThemeColor(R.attr.colorPrimary))
             background.setBackgroundTint(resolveThemeColor(R.attr.composeBackground))
             messageBackground.setBackgroundTint(resolveThemeColor(R.attr.bubbleColor))
-            composeBackground.setBackgroundTint(resolveThemeColor(R.attr.composeBackground))
-            composeBackground2.setBackgroundTint(resolveThemeColor(R.attr.composeBackground))
+            composeBackgroundGradient.setBackgroundTint(resolveThemeColor(R.attr.composeBackground))
+            composeBackgroundSolid.setBackgroundTint(resolveThemeColor(R.attr.composeBackground))
         }
     }
 
@@ -123,10 +123,9 @@ class QkReplyActivity : QkThemedActivity(), QkReplyView {
         return true
     }
 
-    override fun getActivityThemeRes(night: Boolean, black: Boolean) = when {
-        night && black -> R.style.AppThemeBlackDialog
-        night && !black -> R.style.AppThemeDarkDialog
-        else -> R.style.AppThemeLightDialog
+    override fun getActivityThemeRes(black: Boolean) = when {
+        black -> R.style.AppThemeDialog_Black
+        else -> R.style.AppThemeDialog
     }
 
 }

@@ -31,6 +31,7 @@ import com.moez.QKSMS.common.base.QkViewHolder
 import com.moez.QKSMS.common.util.Colors
 import com.moez.QKSMS.common.util.DateFormatter
 import com.moez.QKSMS.common.util.extensions.setVisible
+import com.moez.QKSMS.extensions.removeAccents
 import com.moez.QKSMS.model.SearchResult
 import kotlinx.android.synthetic.main.search_list_item.view.*
 import javax.inject.Inject
@@ -58,13 +59,13 @@ class SearchAdapter @Inject constructor(
     override fun onBindViewHolder(viewHolder: QkViewHolder, position: Int) {
         val previous = data.getOrNull(position - 1)
         val result = getItem(position)
-        val view = viewHolder.itemView
+        val view = viewHolder.containerView
 
         view.resultsHeader.setVisible(result.messages > 0 && previous?.messages == 0)
 
         val query = result.query
         val title = SpannableString(result.conversation.getTitle())
-        var index = title.indexOf(query, ignoreCase = true)
+        var index = title.removeAccents().indexOf(query, ignoreCase = true)
 
         while (index >= 0) {
             title.setSpan(BackgroundColorSpan(highlightColor), index, index + query.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)

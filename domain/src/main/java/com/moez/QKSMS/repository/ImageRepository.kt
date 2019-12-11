@@ -23,8 +23,6 @@ import android.net.Uri
 
 interface ImageRepository {
 
-    fun loadImage(uri: Uri): Bitmap?
-
-    fun saveImage(uri: Uri)
+    fun loadImage(uri: Uri, width: Int, height: Int): Bitmap?
 
 }

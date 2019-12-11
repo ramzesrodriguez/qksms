@@ -19,31 +19,25 @@
 package com.moez.QKSMS.common.widget
 
 import android.content.Context
-import android.net.Uri
-import android.provider.ContactsContract
-import android.telephony.PhoneNumberUtils
 import android.util.AttributeSet
 import android.view.View
 import android.widget.FrameLayout
+import com.bumptech.glide.signature.ObjectKey
 import com.moez.QKSMS.R
 import com.moez.QKSMS.common.Navigator
 import com.moez.QKSMS.common.util.Colors
 import com.moez.QKSMS.common.util.extensions.setBackgroundTint
 import com.moez.QKSMS.common.util.extensions.setTint
 import com.moez.QKSMS.injection.appComponent
-import com.moez.QKSMS.listener.ContactAddedListener
 import com.moez.QKSMS.model.Contact
 import com.moez.QKSMS.model.Recipient
 import com.moez.QKSMS.util.GlideApp
-import com.uber.autodispose.android.ViewScopeProvider
-import com.uber.autodispose.kotlin.autoDisposable
 import kotlinx.android.synthetic.main.avatar_view.view.*
 import javax.inject.Inject
 
 class AvatarView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : FrameLayout(context, attrs) {
 
     @Inject lateinit var colors: Colors
-    @Inject lateinit var contactAddedListener: ContactAddedListener
     @Inject lateinit var navigator: Navigator
 
     /**
@@ -59,6 +53,7 @@ class AvatarView @JvmOverloads constructor(context: Context, attrs: AttributeSet
     private var lookupKey: String? = null
     private var name: String? = null
     private var address: String? = null
+    private var lastUpdated: Long? = null
 
     init {
         if (!isInEditMode) {
@@ -69,43 +64,36 @@ class AvatarView @JvmOverloads constructor(context: Context, attrs: AttributeSet
 
         setBackgroundResource(R.drawable.circle)
         clipToOutline = true
-
-        setOnClickListener {
-            if (lookupKey.isNullOrEmpty()) {
-                address?.let { address ->
-                    // Allow the user to add the contact
-                    navigator.addContact(address)
-
-                    // Listen for contact changes
-                    contactAddedListener.listen(address)
-                            .autoDisposable(ViewScopeProvider.from(this))
-                            .subscribe()
-                }
-            } else {
-                val uri = Uri.withAppendedPath(ContactsContract.Contacts.CONTENT_LOOKUP_URI, lookupKey)
-                ContactsContract.QuickContact.showQuickContact(context, this@AvatarView, uri,
-                        ContactsContract.QuickContact.MODE_MEDIUM, null)
-            }
-        }
     }
 
+    /**
+     * If the [recipient] has a contact: use the contact's avatar, but keep the address.
+     * Use the recipient address otherwise.
+     */
     fun setContact(recipient: Recipient?) {
         // If the recipient has a contact, just use that and return
         recipient?.contact?.let { contact ->
-            setContact(contact)
+            setContact(contact, recipient.address)
             return
         }
 
         lookupKey = null
         name = null
         address = recipient?.address
+        lastUpdated = 0
         updateView()
     }
 
-    fun setContact(contact: Contact?) {
+    /**
+     * Use the [contact] information to display the avatar.
+     * A specific [contactAddress] can be specified (useful when the contact has several addresses).
+     */
+    fun setContact(contact: Contact?, contactAddress: String? = null) {
         lookupKey = contact?.lookupKey
         name = contact?.name
-        address = contact?.numbers?.firstOrNull()?.address
+        // If a contactAddress has been given, we use it. Use the contact address otherwise.
+        address = contactAddress ?: contact?.numbers?.firstOrNull()?.address
+        lastUpdated = contact?.lastUpdate
         updateView()
     }
 
@@ -137,7 +125,10 @@ class AvatarView @JvmOverloads constructor(context: Context, attrs: AttributeSet
 
         photo.setImageDrawable(null)
         address?.let { address ->
-            GlideApp.with(photo).load(PhoneNumberUtils.stripSeparators(address)).into(photo)
+            GlideApp.with(photo)
+                    .load("tel:$address")
+                    .signature(ObjectKey(lastUpdated ?: 0L))
+                    .into(photo)
         }
     }
 }

@@ -24,7 +24,6 @@ import androidx.core.view.inputmethod.InputContentInfoCompat
 import com.moez.QKSMS.common.base.QkView
 import com.moez.QKSMS.model.Attachment
 import com.moez.QKSMS.model.Contact
-import com.moez.QKSMS.model.Message
 import io.reactivex.Observable
 import io.reactivex.subjects.Subject
 
@@ -39,9 +38,10 @@ interface ComposeView : QkView<ComposeState> {
     val menuReadyIntent: Observable<Unit>
     val optionsItemIntent: Observable<Int>
     val sendAsGroupIntent: Observable<*>
-    val messageClickIntent: Subject<Message>
+    val messageClickIntent: Subject<Long>
+    val messagePartClickIntent: Subject<Long>
     val messagesSelectedIntent: Observable<List<Long>>
-    val cancelSendingIntent: Subject<Message>
+    val cancelSendingIntent: Subject<Long>
     val attachmentDeletedIntent: Subject<Attachment>
     val textChangedIntent: Observable<CharSequence>
     val attachIntent: Observable<Unit>
@@ -61,6 +61,7 @@ interface ComposeView : QkView<ComposeState> {
 
     fun clearSelection()
     fun showDetails(details: String)
+    fun requestDefaultSms()
     fun requestStoragePermission()
     fun requestSmsPermission()
     fun requestCamera()

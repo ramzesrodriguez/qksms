@@ -42,15 +42,15 @@ class ConversationMediaAdapter @Inject constructor(
         val view = inflater.inflate(R.layout.conversation_media_list_item, parent, false)
         return QkViewHolder(view).apply {
             view.thumbnail.setOnClickListener {
-                val part = getItem(adapterPosition)!!
+                val part = getItem(adapterPosition) ?: return@setOnClickListener
                 navigator.showMedia(part.id)
             }
         }
     }
 
     override fun onBindViewHolder(holder: QkViewHolder, position: Int) {
-        val part = getItem(position)!!
-        val view = holder.itemView
+        val part = getItem(position) ?: return
+        val view = holder.containerView
 
         GlideApp.with(context)
                 .load(part.getUri())

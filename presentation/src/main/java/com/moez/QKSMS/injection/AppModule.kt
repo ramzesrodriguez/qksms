@@ -24,6 +24,8 @@ import android.content.Context
 import android.preference.PreferenceManager
 import androidx.lifecycle.ViewModelProvider
 import com.f2prateek.rx.preferences2.RxSharedPreferences
+import com.moez.QKSMS.blocking.BlockingClient
+import com.moez.QKSMS.blocking.BlockingManager
 import com.moez.QKSMS.common.ViewModelFactory
 import com.moez.QKSMS.common.util.NotificationManagerImpl
 import com.moez.QKSMS.common.util.ShortcutManagerImpl
@@ -37,8 +39,8 @@ import com.moez.QKSMS.manager.AlarmManager
 import com.moez.QKSMS.manager.AlarmManagerImpl
 import com.moez.QKSMS.manager.AnalyticsManager
 import com.moez.QKSMS.manager.AnalyticsManagerImpl
-import com.moez.QKSMS.manager.ExternalBlockingManager
-import com.moez.QKSMS.manager.ExternalBlockingManagerImpl
+import com.moez.QKSMS.manager.ChangelogManager
+import com.moez.QKSMS.manager.ChangelogManagerImpl
 import com.moez.QKSMS.manager.KeyManager
 import com.moez.QKSMS.manager.KeyManagerImpl
 import com.moez.QKSMS.manager.NotificationManager
@@ -61,12 +63,14 @@ import com.moez.QKSMS.mapper.CursorToRecipientImpl
 import com.moez.QKSMS.mapper.RatingManagerImpl
 import com.moez.QKSMS.repository.BackupRepository
 import com.moez.QKSMS.repository.BackupRepositoryImpl
+import com.moez.QKSMS.repository.BlockingRepository
+import com.moez.QKSMS.repository.BlockingRepositoryImpl
 import com.moez.QKSMS.repository.ContactRepository
 import com.moez.QKSMS.repository.ContactRepositoryImpl
 import com.moez.QKSMS.repository.ConversationRepository
 import com.moez.QKSMS.repository.ConversationRepositoryImpl
 import com.moez.QKSMS.repository.ImageRepository
-import com.moez.QKSMS.repository.ImageRepostoryImpl
+import com.moez.QKSMS.repository.ImageRepositoryImpl
 import com.moez.QKSMS.repository.MessageRepository
 import com.moez.QKSMS.repository.MessageRepositoryImpl
 import com.moez.QKSMS.repository.ScheduledMessageRepository
@@ -74,6 +78,7 @@ import com.moez.QKSMS.repository.ScheduledMessageRepositoryImpl
 import com.moez.QKSMS.repository.SyncRepository
 import com.moez.QKSMS.repository.SyncRepositoryImpl
 import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import dagger.Module
 import dagger.Provides
 import javax.inject.Singleton
@@ -100,7 +105,9 @@ class AppModule(private var application: Application) {
     @Provides
     @Singleton
     fun provideMoshi(): Moshi {
-        return Moshi.Builder().build()
+        return Moshi.Builder()
+                .add(KotlinJsonAdapterFactory())
+                .build()
     }
 
     @Provides
@@ -123,7 +130,10 @@ class AppModule(private var application: Application) {
     fun provideAnalyticsManager(manager: AnalyticsManagerImpl): AnalyticsManager = manager
 
     @Provides
-    fun externalBlockingManager(manager: ExternalBlockingManagerImpl): ExternalBlockingManager = manager
+    fun blockingClient(manager: BlockingManager): BlockingClient = manager
+
+    @Provides
+    fun changelogManager(manager: ChangelogManagerImpl): ChangelogManager = manager
 
     @Provides
     fun provideKeyManager(manager: KeyManagerImpl): KeyManager = manager
@@ -143,7 +153,6 @@ class AppModule(private var application: Application) {
     @Provides
     fun provideWidgetManager(manager: WidgetManagerImpl): WidgetManager = manager
 
-
     // Mapper
 
     @Provides
@@ -161,11 +170,13 @@ class AppModule(private var application: Application) {
     @Provides
     fun provideCursorToRecipient(mapper: CursorToRecipientImpl): CursorToRecipient = mapper
 
-
     // Repository
 
     @Provides
     fun provideBackupRepository(repository: BackupRepositoryImpl): BackupRepository = repository
+
+    @Provides
+    fun provideBlockingRepository(repository: BlockingRepositoryImpl): BlockingRepository = repository
 
     @Provides
     fun provideContactRepository(repository: ContactRepositoryImpl): ContactRepository = repository
@@ -174,7 +185,7 @@ class AppModule(private var application: Application) {
     fun provideConversationRepository(repository: ConversationRepositoryImpl): ConversationRepository = repository
 
     @Provides
-    fun provideImageRepository(repository: ImageRepostoryImpl): ImageRepository = repository
+    fun provideImageRepository(repository: ImageRepositoryImpl): ImageRepository = repository
 
     @Provides
     fun provideMessageRepository(repository: MessageRepositoryImpl): MessageRepository = repository

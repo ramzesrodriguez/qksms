@@ -57,13 +57,13 @@ class ContactAdapter @Inject constructor() : QkAdapter<Contact>() {
 
     override fun onBindViewHolder(holder: QkViewHolder, position: Int) {
         val contact = getItem(position)
-        val view = holder.itemView
+        val view = holder.containerView
 
         view.avatar.setContact(contact)
         view.name.text = contact.name
         view.name.setVisible(view.name.text.isNotEmpty())
-        view.address.text = contact.numbers.first()?.address ?: ""
-        view.type.text = contact.numbers.first()?.type ?: ""
+        view.address.text = contact.numbers.firstOrNull()?.address ?: ""
+        view.type.text = contact.numbers.firstOrNull()?.type ?: ""
 
         val adapter = view.addresses.adapter as PhoneNumberAdapter
         adapter.contact = contact

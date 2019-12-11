@@ -19,7 +19,6 @@
 package com.moez.QKSMS.feature.scheduled
 
 import android.net.Uri
-import android.telephony.PhoneNumberUtils
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.core.view.isVisible
@@ -32,6 +31,7 @@ import com.moez.QKSMS.model.Contact
 import com.moez.QKSMS.model.Recipient
 import com.moez.QKSMS.model.ScheduledMessage
 import com.moez.QKSMS.repository.ContactRepository
+import com.moez.QKSMS.util.PhoneNumberUtils
 import io.reactivex.subjects.PublishSubject
 import io.reactivex.subjects.Subject
 import kotlinx.android.synthetic.main.scheduled_message_list_item.view.*
@@ -39,7 +39,8 @@ import javax.inject.Inject
 
 class ScheduledMessageAdapter @Inject constructor(
     private val contactRepo: ContactRepository,
-    private val dateFormatter: DateFormatter
+    private val dateFormatter: DateFormatter,
+    private val phoneNumberUtils: PhoneNumberUtils
 ) : QkRealmAdapter<ScheduledMessage>() {
 
     private val contacts by lazy { contactRepo.getContacts() }
@@ -56,15 +57,15 @@ class ScheduledMessageAdapter @Inject constructor(
 
         return QkViewHolder(view).apply {
             view.setOnClickListener {
-                val message = getItem(adapterPosition)!!
+                val message = getItem(adapterPosition) ?: return@setOnClickListener
                 clicks.onNext(message.id)
             }
         }
     }
 
     override fun onBindViewHolder(holder: QkViewHolder, position: Int) {
-        val message = getItem(position)!!
-        val view = holder.itemView
+        val message = getItem(position) ?: return
+        val view = holder.containerView
 
         // GroupAvatarView only accepts recipients, so map the phone numbers to recipients
         view.avatars.contacts = message.recipients.map { address -> Recipient(address = address) }
@@ -91,7 +92,7 @@ class ScheduledMessageAdapter @Inject constructor(
             if (super.get(key)?.isValid != true) {
                 set(key, contacts.firstOrNull { contact ->
                     contact.numbers.any {
-                        PhoneNumberUtils.compare(it.address, key)
+                        phoneNumberUtils.compare(it.address, key)
                     }
                 })
             }

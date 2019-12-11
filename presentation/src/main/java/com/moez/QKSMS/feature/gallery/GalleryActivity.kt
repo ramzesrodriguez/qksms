@@ -18,15 +18,20 @@
  */
 package com.moez.QKSMS.feature.gallery
 
+import android.Manifest
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.app.ActivityCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProviders
+import androidx.recyclerview.widget.RecyclerView
+import androidx.viewpager2.widget.ViewPager2
 import com.moez.QKSMS.R
 import com.moez.QKSMS.common.base.QkActivity
-import com.moez.QKSMS.common.util.extensions.addOnPageChangeListener
+import com.moez.QKSMS.common.util.DateFormatter
 import com.moez.QKSMS.common.util.extensions.setVisible
 import com.moez.QKSMS.model.MmsPart
 import dagger.android.AndroidInjection
@@ -38,34 +43,47 @@ import javax.inject.Inject
 
 class GalleryActivity : QkActivity(), GalleryView {
 
+    @Inject lateinit var dateFormatter: DateFormatter
     @Inject lateinit var viewModelFactory: ViewModelProvider.Factory
     @Inject lateinit var pagerAdapter: GalleryPagerAdapter
+
+    val partId by lazy { intent.getLongExtra("partId", 0L) }
 
     private val optionsItemSubject: Subject<Int> = PublishSubject.create()
     private val pageChangedSubject: Subject<MmsPart> = PublishSubject.create()
     private val viewModel by lazy { ViewModelProviders.of(this, viewModelFactory)[GalleryViewModel::class.java] }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        delegate.setLocalNightMode(AppCompatDelegate.MODE_NIGHT_YES)
         AndroidInjection.inject(this)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.gallery_activity)
         showBackButton(true)
         viewModel.bindView(this)
 
-        pagerAdapter.setInitialPositionHandler = { position ->
-            pager.setCurrentItem(position, false)
-
-            // The ViewPager's page change listener isn't called if the initial position is 0
-            if (position == 0) {
-                pageChanged(0)
-            }
-        }
         pager.adapter = pagerAdapter
-        pager.addOnPageChangeListener(this::pageChanged)
+        pager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                this@GalleryActivity.onPageSelected(position)
+            }
+        })
+
+        pagerAdapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
+            override fun onChanged() {
+                pagerAdapter.data?.takeIf { pagerAdapter.itemCount > 0 }
+                        ?.indexOfFirst { part -> part.id == partId }
+                        ?.let { index ->
+                            onPageSelected(index)
+                            pager.setCurrentItem(index, false)
+                            pagerAdapter.unregisterAdapterDataObserver(this)
+                        }
+            }
+        })
     }
 
-    private fun pageChanged(position: Int) {
-        toolbarSubtitle.text = pagerAdapter.getPageTitle(position)
+    fun onPageSelected(position: Int) {
+        toolbarSubtitle.text = pagerAdapter.getItem(position)?.messages?.firstOrNull()?.date
+                ?.let(dateFormatter::getDetailedTimestamp)
         toolbarSubtitle.isVisible = toolbarTitle.text.isNotBlank()
 
         pagerAdapter.getItem(position)?.run(pageChangedSubject::onNext)
@@ -75,7 +93,7 @@ class GalleryActivity : QkActivity(), GalleryView {
         toolbar.setVisible(state.navigationVisible)
 
         title = state.title
-        pagerAdapter.parts = state.parts
+        pagerAdapter.updateData(state.parts)
     }
 
     override fun optionsItemSelected(): Observable<Int> = optionsItemSubject
@@ -83,6 +101,10 @@ class GalleryActivity : QkActivity(), GalleryView {
     override fun screenTouched(): Observable<*> = pagerAdapter.clicks
 
     override fun pageChanged(): Observable<MmsPart> = pageChangedSubject
+
+    override fun requestStoragePermission() {
+        ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), 0)
+    }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.gallery, menu)

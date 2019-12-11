@@ -22,20 +22,20 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.moez.QKSMS.R
-import com.moez.QKSMS.common.Navigator
 import com.moez.QKSMS.common.base.QkRealmAdapter
 import com.moez.QKSMS.common.base.QkViewHolder
 import com.moez.QKSMS.common.util.extensions.setVisible
 import com.moez.QKSMS.model.Recipient
 import io.reactivex.disposables.CompositeDisposable
+import io.reactivex.subjects.PublishSubject
+import io.reactivex.subjects.Subject
 import kotlinx.android.synthetic.main.conversation_recipient_list_item.view.*
 import javax.inject.Inject
 
-class ConversationRecipientAdapter @Inject constructor(
-    private val navigator: Navigator
-) : QkRealmAdapter<Recipient>() {
+class ConversationRecipientAdapter @Inject constructor() : QkRealmAdapter<Recipient>() {
 
     var threadId: Long = 0L
+    val clicks: Subject<Long> = PublishSubject.create()
 
     private val disposables = CompositeDisposable()
 
@@ -44,19 +44,15 @@ class ConversationRecipientAdapter @Inject constructor(
         val view = layoutInflater.inflate(R.layout.conversation_recipient_list_item, parent, false)
         return QkViewHolder(view).apply {
             view.setOnClickListener {
-                val recipient = getItem(adapterPosition)!!
-                if (recipient.contact == null) {
-                    navigator.addContact(recipient.address)
-                } else {
-                    view.avatar.callOnClick()
-                }
+                val recipient = getItem(adapterPosition) ?: return@setOnClickListener
+                clicks.onNext(recipient.id)
             }
         }
     }
 
     override fun onBindViewHolder(holder: QkViewHolder, position: Int) {
-        val recipient = getItem(position)!!
-        val view = holder.itemView
+        val recipient = getItem(position) ?: return
+        val view = holder.containerView
 
         view.avatar.threadId = threadId
         view.avatar.setContact(recipient)

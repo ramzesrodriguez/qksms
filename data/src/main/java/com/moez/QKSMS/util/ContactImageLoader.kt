@@ -20,7 +20,6 @@ package com.moez.QKSMS.util
 
 import android.content.Context
 import android.provider.ContactsContract
-import android.telephony.PhoneNumberUtils
 import com.bumptech.glide.Priority
 import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.Key
@@ -36,22 +35,36 @@ import io.reactivex.schedulers.Schedulers
 import java.io.InputStream
 import java.security.MessageDigest
 
-
 class ContactImageLoader(
     private val context: Context,
-    private val contactRepo: ContactRepository
+    private val contactRepo: ContactRepository,
+    private val phoneNumberUtils: PhoneNumberUtils
 ) : ModelLoader<String, InputStream> {
 
     override fun handles(model: String): Boolean {
-        return PhoneNumberUtils.isGlobalPhoneNumber(model)
+        return model.startsWith("tel:")
     }
 
-    override fun buildLoadData(model: String, width: Int, height: Int, options: Options): ModelLoader.LoadData<InputStream>? {
-        return ModelLoader.LoadData(ContactImageKey(model), ContactImageFetcher(context, contactRepo, model))
+    override fun buildLoadData(
+        model: String,
+        width: Int,
+        height: Int,
+        options: Options
+    ): ModelLoader.LoadData<InputStream>? {
+        return ModelLoader.LoadData(
+                ContactImageKey(phoneNumberUtils.normalizeNumber(model)),
+                ContactImageFetcher(context, contactRepo, model))
     }
 
-    class Factory(val context: Context, val prefs: Preferences) : ModelLoaderFactory<String, InputStream> {
-        override fun build(multiFactory: MultiModelLoaderFactory) = ContactImageLoader(context, ContactRepositoryImpl(context, prefs))
+    class Factory(
+        private val context: Context,
+        private val prefs: Preferences
+    ) : ModelLoaderFactory<String, InputStream> {
+
+        override fun build(multiFactory: MultiModelLoaderFactory): ContactImageLoader {
+            return ContactImageLoader(context, ContactRepositoryImpl(context, prefs), PhoneNumberUtils(context))
+        }
+
         override fun teardown() {} // nothing to do here
     }
 
@@ -73,7 +86,9 @@ class ContactImageLoader(
 
         override fun loadData(priority: Priority, callback: DataFetcher.DataCallback<in InputStream>) {
             loadPhotoDisposable = contactRepo.findContactUri(address)
-                    .map { uri -> ContactsContract.Contacts.openContactPhotoInputStream(context.contentResolver, uri) }
+                    .map { uri ->
+                        ContactsContract.Contacts.openContactPhotoInputStream(context.contentResolver, uri, true)
+                    }
                     .subscribeOn(Schedulers.io())
                     .subscribe(
                             { inputStream -> callback.onDataReady(inputStream) },
